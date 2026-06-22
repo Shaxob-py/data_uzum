@@ -70,6 +70,7 @@ async def command_get_child_category_products(message: Message, state: FSMContex
     category_product = state_date.get('category_product')
     category_id = data[category][category_product]
     token = await Token.get_token()
+    await state.clear()
 
     if not is_active is None:
         await message.answer('Jarayon boshlangan iltimos kuting 🫰🏻')
@@ -93,7 +94,6 @@ async def command_get_child_category_products(message: Message, state: FSMContex
 
         await message.answer(f"{text}")
         await User.update_coin(message.from_user.id, 35)
-        await state.clear()
         buttons = ['Sotuvlarni analis qilish 📊', 'Coin sotib olish 🪙', 'Admin bilan boglanish 👮', ]
 
         await message.answer(f"Sizda {user.coin} qoldi", reply_markup=reply_buttons(buttons))
@@ -120,8 +120,5 @@ async def command_get_child_category_products(message: Message, state: FSMContex
 
     await User.update_coin(message.from_user.id, 40)
 
-    await User.update_coin(message.from_user.id, 35)
-    await state.clear()
     buttons = ['Sotuvlarni analis qilish 📊', 'Coin sotib olish 🪙', 'Admin bilan boglanish 👮', ]
-
     await message.answer(f"Sizda {user.coin} qoldi", reply_markup=reply_buttons(buttons))
