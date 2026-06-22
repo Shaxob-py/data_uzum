@@ -1,0 +1,176 @@
+import asyncio
+import re
+
+import aiohttp
+
+GQL_QUERY = """
+query MakeSearch_ItemsAndFilters($queryInput: MakeSearchQueryInput!) {
+  makeSearch(query: $queryInput) {
+    items {
+      catalogCard {
+        ... on SkuGroupCard {
+          productId
+          title
+          minSellPrice
+          feedbackQuantity
+          rating
+        }
+      }
+    }
+    total
+  }
+}
+"""
+
+
+class UzumScraper:
+    GQL_URL = "https://graphql.uzum.uz/"
+    PRODUCT_URL = "https://uzum.uz/ru/product/{product_id}"
+
+    def __init__(self, category_id: int, token: str):
+        self.category_id = category_id
+        self.token = token
+        self.sem = asyncio.Semaphore(20)
+        self.headers = {
+            "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
+            "accept-language": "ru-RU",
+            "origin": "https://uzum.uz",
+            "referer": "https://uzum.uz/",
+            "authorization": f"Bearer {self.token}",
+            "apollographql-client-name": "web-customers",
+            "apollographql-client-version": "1.63.2",
+            "x-iid": "15318bf4-fed7-416a-b8ae-aef4073155a2",
+            "city-id": "1",
+            "content-type": "application/json",
+        }
+        # Флаги ошибок для информирования пользователя
+        self.has_auth_error = False
+        self.has_server_error = False
+
+    def _get_min_feedback(self, total: int) -> int:
+        if total > 35000:
+            return 300
+        if total > 30000:
+            return 250
+        if total > 20000:
+            return 150
+        elif total > 5000:
+            return 50
+        elif total > 1000:
+            return 10
+        return 0
+
+    async def _fetch_page(self, session: aiohttp.ClientSession, offset: int) -> list:
+        payload = {
+            "operationName": "MakeSearch_ItemsAndFilters",
+            "query": GQL_QUERY,
+            "variables": {
+                "queryInput": {
+                    "categoryId": self.category_id,
+                    "showAdultContent": "TRUE",
+                    "filters": [],
+                    "sort": "BY_RELEVANCE_DESC",
+                    "pagination": {"offset": offset, "limit": 48},
+                }
+            },
+        }
+        try:
+            async with session.post(self.GQL_URL, json=payload) as r:
+                if r.status == 401:
+                    self.has_auth_error = True
+                    return []
+                elif r.status >= 500:
+                    self.has_server_error = True
+                    return []
+                elif r.status != 200:
+                    return []
+
+                data = await r.json()
+                if "errors" in data or "data" not in data or not data["data"].get("makeSearch"):
+                    return []
+
+                total = data["data"]["makeSearch"]["total"]
+                items = data["data"]["makeSearch"]["items"] or []
+                products = [i["catalogCard"] for i in items if i.get("catalogCard")]
+                min_feedback = self._get_min_feedback(total)
+                return [p for p in products if p.get("feedbackQuantity", 0) >= min_feedback]
+        except Exception:
+            return []
+
+    async def _fetch_sales(self, session: aiohttp.ClientSession, product: dict) -> dict:
+        fallback_data = {
+            "product_id": product["productId"],
+            "title": product["title"][:50],
+            "price": product.get("minSellPrice", 0),
+            "rating": product.get("rating", 0),
+            "week": 0,
+            "orders_total": 0,
+        }
+        async with self.sem:
+            url = self.PRODUCT_URL.format(product_id=product["productId"])
+            try:
+                async with session.get(url, timeout=10) as r:
+                    if r.status == 401:
+                        self.has_auth_error = True
+                        return fallback_data
+                    elif r.status >= 500:
+                        self.has_server_error = True
+                        return fallback_data
+                    elif r.status != 200:
+                        return fallback_data
+
+                    html = await r.text()
+                    week = re.search(r'(\d+) человек купили на этой неделе', html)
+                    orders = re.search(r'ordersQuantity:(\d+)', html)
+                    return {
+                        "product_id": product["productId"],
+                        "title": product["title"][:50],
+                        "price": product.get("minSellPrice", 0),
+                        "rating": product.get("rating", 0),
+                        "week": int(week.group(1)) if week else 0,
+                        "orders_total": int(orders.group(1)) if orders else 0,
+                    }
+            except Exception:
+                return fallback_data
+
+    async def _collect_raw_data(self) -> list:
+        """Внутренний метод для безопасного сбора всех сырых данных"""
+        self.has_auth_error = False
+        self.has_server_error = False
+
+        async with aiohttp.ClientSession(headers=self.headers) as session:
+            print("Загрузка страниц категории...")
+            tasks = [self._fetch_page(session, offset) for offset in range(0, 3000, 48)]
+            pages = await asyncio.gather(*tasks)
+            all_products = [p for page in pages for p in page]
+
+            print(f"Получено товаров для анализа: {len(all_products)}")
+            if not all_products:
+                return []
+
+            print("Сбор статистики продаж по каждому товару...")
+            all_results = []
+            for i in range(0, len(all_products), 20):
+                batch = all_products[i:i + 20]
+                tasks = [self._fetch_sales(session, p) for p in batch]
+                results = await asyncio.gather(*tasks)
+                all_results.extend(results)
+                print(f"  Проверено: {min(i + 20, len(all_products))}/{len(all_products)}")
+                await asyncio.sleep(0.5)
+
+            return all_results
+
+    async def get_weekly_trends(self, top_n: int = 25) -> list:
+        raw_data = await self._collect_raw_data()
+        if not raw_data:
+            return []
+
+        raw_data.sort(key=lambda x: x["week"], reverse=True)
+        return raw_data[:top_n]
+
+    async def get_total_leaders(self, top_n: int = 25) -> list:
+        raw_data = await self._collect_raw_data()
+        if not raw_data:
+            return []
+        raw_data.sort(key=lambda x: x["orders_total"], reverse=True)
+        return raw_data[:top_n]
