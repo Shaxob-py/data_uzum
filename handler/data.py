@@ -128,7 +128,7 @@ async def command_get_child_category_products(message: Message, state: FSMContex
 
 @dp.message(F.text == 'Tozalash')
 async def clear(message: Message, state: FSMContext):
-    if message.from_user.id != settings.AUTH_USER_ID:
+    if message.from_user.id != settings.ADMIN_TELEGRAM_ID:
         return
     await state.clear()
     await message.answer("Tozalandi")
