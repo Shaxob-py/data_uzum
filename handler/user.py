@@ -14,6 +14,7 @@ dp = Dispatcher()
 @dp.message(F.text == "Orqaga 🔙")
 @dp.message(Command("start"))
 async def command_start_handler(message: Message):
+
     buttons = ['Sotuvlarni analis qilish 📊', 'Coin sotib olish 🪙', 'Admin bilan boglanish 👮', ]
 
     user = await User.get_by_telegram_id(message.from_user.id)
