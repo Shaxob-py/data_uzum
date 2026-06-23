@@ -27,6 +27,7 @@ async def command_get_category(message: Message, state: FSMContext):
         await state.set_state(CustomerState.get_category)
 
 
+@dp.message(F.text=='Orqaga 🔙', CustomerState.get_child_category_products)
 @dp.message(F.text, CustomerState.get_category)
 async def command_get_child_category(message: Message, state: FSMContext):
     # print(data[message.text])

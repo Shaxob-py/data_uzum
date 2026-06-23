@@ -11,7 +11,7 @@ from states.user import AdminState
 from utils.keyboard import reply_buttons
 
 
-@dp.message(Command("admin"))
+@dp.message(F.text=="admin")
 async def admin_command_handler(message: Message, state: FSMContext):
     print(message.from_user.id)
     if message.from_user.id != settings.ADMIN_TELEGRAM_ID:
