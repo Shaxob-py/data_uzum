@@ -13,8 +13,9 @@ TOKEN = settings.BOT_TOKEN
 
 async def main() -> None:
     bot = Bot(token=TOKEN)
-    await dp.start_polling(bot)
     await db.create_all()
+    await asyncio.sleep(0.5)
+    await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
