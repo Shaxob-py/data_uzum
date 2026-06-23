@@ -2,10 +2,12 @@ from aiogram import Dispatcher, F
 from aiogram.filters import Command
 from aiogram.types import Message
 
+from core.core import settings
 from database.users import User
 from product import data
 from states.user import CustomerState
 from utils.keyboard import reply_buttons, call_with_admin
+from aiogram.fsm.context import FSMContext
 
 dp = Dispatcher()
 
@@ -57,3 +59,10 @@ async def command_coin(message: Message):
                          'adminga murojat qiling tashlang')
 
     await message.answer('Admin 👮', reply_markup=call_with_admin())
+
+@dp.message(F.text == 'Tozalash')
+async def clear(message: Message, state: FSMContext):
+    if message.from_user.id != settings.ADMIN_TELEGRAM_ID:
+        return
+    await state.clear()
+    await message.answer("Tozalandi")

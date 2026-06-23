@@ -3,7 +3,6 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 from aiogram.types import ReplyKeyboardRemove
 
-from core.core import settings
 from database.token import Token
 from database.users import User
 from handler.user import dp
@@ -126,9 +125,3 @@ async def command_get_child_category_products(message: Message, state: FSMContex
     await message.answer(f"Sizda {user.coin} qoldi", reply_markup=reply_buttons(buttons))
 
 
-@dp.message(F.text == 'Tozalash')
-async def clear(message: Message, state: FSMContext):
-    if message.from_user.id != settings.ADMIN_TELEGRAM_ID:
-        return
-    await state.clear()
-    await message.answer("Tozalandi")
