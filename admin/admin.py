@@ -45,7 +45,7 @@ async def admin_command_handler(message: Message, state: FSMContext):
     await state.set_state(AdminState.give_coin)
 
 
-@dp.message(AdminState.get_phone)
+@dp.message(AdminState.give_coin)
 async def admin_command_handler(message: Message, state: FSMContext):
     data = await state.get_data()
     phone = data['phone']
@@ -56,6 +56,10 @@ async def admin_command_handler(message: Message, state: FSMContext):
         return
 
     await User.give_coin(phone, int(message.text))
+    await message.answer(
+    f"✅ {phone} foydalanuvchisiga {message.text} coin qo'shildi."
+    )
+    await state.clear()
 
 
 @dp.message(F.text == "JWT yangilash")

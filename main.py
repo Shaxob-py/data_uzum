@@ -1,4 +1,6 @@
 import asyncio
+import logging
+from asyncio.log import logger
 
 from aiogram import Bot
 
