@@ -9,7 +9,8 @@ class CustomerState(StatesGroup):
 
 class AdminState(StatesGroup):
     register_admin = State()
-    give_coin = State()
+    get_phone = State()
     update_jwt = State()
+    give_coin = State()
 
 

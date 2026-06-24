@@ -1,5 +1,4 @@
 from aiogram import F
-from aiogram.filters import Command
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
@@ -11,7 +10,7 @@ from states.user import AdminState
 from utils.keyboard import reply_buttons
 
 
-@dp.message(F.text=="admin")
+@dp.message(F.text == "admin")
 async def admin_command_handler(message: Message, state: FSMContext):
     if message.from_user.id != settings.ADMIN_TELEGRAM_ID:
         return
@@ -36,21 +35,27 @@ async def admin_command_handler(message: Message, state: FSMContext):
 @dp.message(AdminState.register_admin, F.text == 'Coin berish')
 async def admin_command_handler(message: Message, state: FSMContext):
     await message.answer('Telephon raqamini kriting raqam , coin')
+    await state.set_state(AdminState.get_phone)
+
+
+@dp.message(AdminState.get_phone)
+async def admin_command_handler(message: Message, state: FSMContext):
+    await message.answer('coin miqdorini kroting')
+    await state.update_data(phone=message.text)
     await state.set_state(AdminState.give_coin)
 
 
-@dp.message(AdminState.give_coin)
+@dp.message(AdminState.get_phone)
 async def admin_command_handler(message: Message, state: FSMContext):
-    date = message.text.split(',')
-    coin = date[1]
-    users = await User.get_by_phone(date[0])
-    if users:
-        await User.give_coin(date[0], int(coin))
-        await state.clear()
-    else:
-        await message.answer('User topilmadi )')
-        await state.clear()
+    data = await state.get_data()
+    phone = data['phone']
+    user = await User.get_by_phone(phone)
+
+    if user is None:
+        await message.answer('User yoq')
         return
+
+    await User.give_coin(phone, int(message.text))
 
 
 @dp.message(F.text == "JWT yangilash")
@@ -67,5 +72,3 @@ async def admin_command_handler(message: Message, state: FSMContext):
     await state.clear()
 
     await message.answer("Tanglang aka", reply_markup=reply_buttons(buttons))
-
-
