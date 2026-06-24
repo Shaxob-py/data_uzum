@@ -56,7 +56,7 @@ class User(CreatedModel):
 
     @classmethod
     async def get_by_phone(cls, phone: str):
-        query = (select(cls).where(cls.phone == '998901077733'))
+        query = (select(cls).where(cls.phone == phone))
         res = await db.execute(query)
 
         return res.scalar()

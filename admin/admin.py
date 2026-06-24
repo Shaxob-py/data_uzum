@@ -34,7 +34,7 @@ async def admin_command_handler(message: Message, state: FSMContext):
 
 @dp.message(AdminState.register_admin, F.text == 'Coin berish')
 async def admin_command_handler(message: Message, state: FSMContext):
-    await message.answer('Telephon raqamini kriting raqam , coin')
+    await message.answer('Telephon raqamini kriting raqam')
     await state.set_state(AdminState.get_phone)
 
 
