@@ -5,6 +5,7 @@ from aiogram.types import Message
 
 from core.core import settings
 from database.users import User
+from product import data
 from states.user import CustomerState
 from utils.keyboard import reply_buttons, call_with_admin
 
@@ -38,7 +39,7 @@ async def command_contact(message: Message):
         )
         buttons = ['Sotuvlarni tahlil qilish 📊', 'Coin sotib olish 🪙', 'Admin bilan boglanish 👮', ]
         await message.answer(
-            "Registratsiyadan otingiz 😊", reply_markup=reply_buttons(reply_buttons(buttons)))
+            "Registratsiyadan otingiz 😊", reply_markup=reply_buttons(data.keys()))
 
     else:
         await message.answer('Faqat ozingizni raqamingizni kriting 🚫')
