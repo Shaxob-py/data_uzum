@@ -24,7 +24,11 @@ async def admin_command_handler(message: Message, state: FSMContext):
 @dp.message(AdminState.register_admin, F.text == 'Userlarni korish')
 async def admin_command_handler(message: Message, state: FSMContext):
     users = await User.get_all()
-    await message.answer(f'Userlar {users}')
+    all_users = ''
+    for user in users:
+        all_users += f'Name:  {user.name}   Phone:  {user.phone} Coin:  {user.coin}\n\n'
+    await message.answer(f'{all_users}')
+
     buttons = ['JWT yangilash', 'Userlarni korish', "Coin berish"]
     await message.answer("Tanglang aka", reply_markup=reply_buttons(buttons))
 
@@ -42,9 +46,10 @@ async def admin_command_handler(message: Message, state: FSMContext):
     users = await User.get_by_phone(date[0])
     if users:
         await User.give_coin(date[0], int(coin))
-
+        await state.clear()
     else:
         await message.answer('User topilmadi )')
+        await state.clear()
         return
 
 
@@ -59,6 +64,7 @@ async def admin_command_handler(message: Message, state: FSMContext):
     await Token.update_token(message.text)
     await message.answer("JWT yangilandi")
     buttons = ['JWT yangilash', 'Userlarni korish', "Coin berish"]
+    await state.clear()
 
     await message.answer("Tanglang aka", reply_markup=reply_buttons(buttons))
 

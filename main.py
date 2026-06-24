@@ -2,11 +2,10 @@ import asyncio
 
 from aiogram import Bot
 
+from admin.admin import dp
 from core.core import settings
 from database.base import db
-from handler.user import dp
 from handler.data import dp
-from admin.admin import dp
 
 TOKEN = settings.BOT_TOKEN
 

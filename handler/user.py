@@ -1,13 +1,12 @@
 from aiogram import Dispatcher, F
 from aiogram.filters import Command
+from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from core.core import settings
 from database.users import User
-from product import data
 from states.user import CustomerState
 from utils.keyboard import reply_buttons, call_with_admin
-from aiogram.fsm.context import FSMContext
 
 dp = Dispatcher()
 
@@ -16,14 +15,14 @@ dp = Dispatcher()
 @dp.message(F.text == "Orqaga 🔙")
 @dp.message(Command("start"))
 async def command_start_handler(message: Message):
-
-    buttons = ['Sotuvlarni analis qilish 📊', 'Coin sotib olish 🪙', 'Admin bilan boglanish 👮', ]
+    buttons = ['Sotuvlarni tahlil qilish 📊', 'Coin sotib olish 🪙', 'Admin bilan boglanish 👮', ]
 
     user = await User.get_by_telegram_id(message.from_user.id)
     if user is None:
         await message.answer(
-            "Salom 😉 men uzumni analez qiladigan botman 📊. Bot orqali siz xoxlagan cotegoriyadagi"
-            " maxsulotlarni umumiy sotuvi va haftalik sotivini korishingiz mumkun. Sizda 100 coin bor 🪙",
+            '''Salom! 😉 Men Uzum sotuvlarini tahlil qiluvchi botman. 📊\n
+    Bot orqali siz istalgan kategoriyadagi mahsulotlarning umumiy sotuvlari va haftalik sotuvlarini ko‘rishingiz mumkin\n.
+    Hisobingizda 100 ta coin mavjud. 🪙''',
             reply_markup=reply_buttons(buttons))
     else:
         await message.answer("Tanlang", reply_markup=reply_buttons(buttons))
@@ -37,8 +36,9 @@ async def command_contact(message: Message):
             telegram_id=message.from_user.id,
             phone=message.contact.phone_number
         )
+        buttons = ['Sotuvlarni tahlil qilish 📊', 'Coin sotib olish 🪙', 'Admin bilan boglanish 👮', ]
         await message.answer(
-            "Registratsiyadan otingiz 😊",)
+            "Registratsiyadan otingiz 😊", reply_markup=reply_buttons(reply_buttons(buttons)))
 
     else:
         await message.answer('Faqat ozingizni raqamingizni kriting 🚫')
@@ -59,6 +59,7 @@ async def command_coin(message: Message):
                          'adminga murojat qiling tashlang')
 
     await message.answer('Admin 👮', reply_markup=call_with_admin())
+
 
 @dp.message(F.text == 'Tozalash')
 async def clear(message: Message, state: FSMContext):
