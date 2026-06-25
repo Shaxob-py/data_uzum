@@ -57,7 +57,9 @@ async def command_get_child_category(message: Message, state: FSMContext):
 
 @dp.message(F.text, CustomerState.get_child_category_products)
 async def command_get_child_category_products(message: Message, state: FSMContext):
-    await message.answer('📊 Analitika tayyorlanmoqda. Iltimos, biroz kuting.\n🔍 Minglab mahsulotlar tahlil qilinmoqda...', reply_markup=ReplyKeyboardRemove())
+    await message.answer(
+        '📊 Analitika tayyorlanmoqda. Iltimos, biroz kuting.\n🔍 Minglab mahsulotlar tahlil qilinmoqda...',
+        reply_markup=ReplyKeyboardRemove())
 
     if message.text not in ['Haftalik', 'Umumiy']:
         await message.answer('Togri narsa yuboring!!')
@@ -105,7 +107,7 @@ async def command_get_child_category_products(message: Message, state: FSMContex
     elif message.text == 'Umumiy':
         if user.coin < 35:
             await message.answer(
-                '''❌ Sizda coin yetarli emas.\n
+                f'''❌ Sizda coin yetarli emas.\n
 
                 💰 Balansingiz: {user.coin} coin\n
                 🪙 Tahlil narxi: 40 coin\n

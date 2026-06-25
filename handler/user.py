@@ -21,16 +21,14 @@ async def command_start_handler(message: Message):
     user = await User.get_by_telegram_id(message.from_user.id)
     if user is None:
         await message.answer(
-            '''Salom! 😉 Men Uzum sotuvlarini tahlil qiluvchi botman. 📊\n
-    Bot orqali siz istalgan kategoriyadagi mahsulotlarning umumiy sotuvlari va haftalik sotuvlarini ko‘rishingiz mumkin\n.
-    Hisobingizda 100 ta coin mavjud. 🪙''',
+            "Salom! 😉 Men Uzum sotuvlarini tahlil qiluvchi botman. 📊\nBot orqali siz istalgan kategoriyadagi mahsulotlarning umumiy sotuvlari va haftalik sotuvlarini ko‘rishingiz mumkin.\nHisobingizda 100 ta coin mavjud. 🪙",
             reply_markup=reply_buttons(buttons))
     else:
         await message.answer("Tanlang", reply_markup=reply_buttons(buttons))
 
 
 @dp.message(F.contact)
-async def command_contact(message: Message):
+async def command_contact(message: Message, state: FSMContext):
     if message.contact.user_id == message.from_user.id:
         await User.create(
             name=message.from_user.username or message.from_user.first_name,
@@ -39,6 +37,7 @@ async def command_contact(message: Message):
         )
         await message.answer(
             "Registratsiyadan otingiz 😊", reply_markup=reply_buttons(data.keys()))
+        await state.set_state(CustomerState.get_category)
 
     else:
         await message.answer('Faqat ozingizni raqamingizni kriting 🚫')
