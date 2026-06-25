@@ -30,7 +30,7 @@ class UzumScraper:
     def __init__(self, category_id: int, token: str):
         self.category_id = category_id
         self.token = token
-        self.sem = asyncio.Semaphore(20)
+        self.sem = asyncio.Semaphore(7)
         self.headers = {
             "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
             "accept-language": "ru-RU",
@@ -43,21 +43,20 @@ class UzumScraper:
             "city-id": "1",
             "content-type": "application/json",
         }
-        # Флаги ошибок для информирования пользователя
         self.has_auth_error = False
         self.has_server_error = False
 
     def _get_min_feedback(self, total: int) -> int:
         if total > 35000:
-            return 300
+            return 770
         if total > 30000:
-            return 250
+            return 650
         if total > 20000:
-            return 150
+            return 530
         elif total > 5000:
-            return 50
+            return 185
         elif total > 1000:
-            return 10
+            return 70
         return 0
 
     async def _fetch_page(self, session: aiohttp.ClientSession, offset: int) -> list:
@@ -112,16 +111,22 @@ class UzumScraper:
                 async with session.get(url, timeout=10) as r:
                     if r.status == 401:
                         self.has_auth_error = True
+                        print(r)
+
                         return fallback_data
                     elif r.status >= 500:
+                        print(r)
                         self.has_server_error = True
                         return fallback_data
                     elif r.status != 200:
+                        print(r)
                         return fallback_data
 
                     html = await r.text()
                     week = re.search(r'(\d+) человек купили на этой неделе', html)
-                    orders = re.search(r'ordersQuantity:(\d+)', html)
+                    orders = re.search(r'ordersAmount:(\d+)', html)
+
+
                     return {
                         "product_id": product["productId"],
                         "title": product["title"][:50],
@@ -130,35 +135,43 @@ class UzumScraper:
                         "week": int(week.group(1)) if week else 0,
                         "orders_total": int(orders.group(1)) if orders else 0,
                     }
+
             except Exception:
                 return fallback_data
 
     async def _collect_raw_data(self) -> list:
-        """Внутренний метод для безопасного сбора всех сырых данных"""
         self.has_auth_error = False
         self.has_server_error = False
 
-        async with aiohttp.ClientSession(headers=self.headers) as session:
+        page_headers = {
+            "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36",
+            "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "accept-language": "ru-RU,ru;q=0.9",
+            "referer": "https://uzum.uz/",
+        }
+
+        async with aiohttp.ClientSession(headers=self.headers) as gql_session:
             print("Загрузка страниц категории...")
-            tasks = [self._fetch_page(session, offset) for offset in range(0, 3000, 48)]
+            tasks = [self._fetch_page(gql_session, offset) for offset in range(0, 3000, 48)]
             pages = await asyncio.gather(*tasks)
             all_products = [p for page in pages for p in page]
 
-            print(f"Получено товаров для анализа: {len(all_products)}")
-            if not all_products:
-                return []
+        print(f"Получено товаров для анализа: {len(all_products)}")
+        if not all_products:
+            return []
 
-            print("Сбор статистики продаж по каждому товару...")
+        print("Сбор статистики продаж по каждому товару...")
+        async with aiohttp.ClientSession(headers=page_headers) as page_session:
             all_results = []
             for i in range(0, len(all_products), 20):
                 batch = all_products[i:i + 20]
-                tasks = [self._fetch_sales(session, p) for p in batch]
+                tasks = [self._fetch_sales(page_session, p) for p in batch]
                 results = await asyncio.gather(*tasks)
                 all_results.extend(results)
                 print(f"  Проверено: {min(i + 20, len(all_products))}/{len(all_products)}")
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(2)
 
-            return all_results
+        return all_results
 
     async def get_weekly_trends(self, top_n: int = 25) -> list:
         raw_data = await self._collect_raw_data()

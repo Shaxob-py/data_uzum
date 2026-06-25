@@ -37,7 +37,6 @@ async def command_contact(message: Message):
             telegram_id=message.from_user.id,
             phone=message.contact.phone_number
         )
-        buttons = ['Sotuvlarni tahlil qilish 📊', 'Coin sotib olish 🪙', 'Admin bilan boglanish 👮', ]
         await message.answer(
             "Registratsiyadan otingiz 😊", reply_markup=reply_buttons(data.keys()))
 

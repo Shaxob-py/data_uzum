@@ -84,7 +84,7 @@ async def command_get_child_category_products(message: Message, state: FSMContex
             return
 
         scraper = UzumScraper(category_id=category_id, token=token.token)
-        if scraper.has_auth_error or scraper.has_server_error:
+        if scraper.has_auth_error:
             await message.answer("Xatolik adminga murojat qiling")
             return
         await state.update_data(is_active=True)
@@ -117,7 +117,8 @@ async def command_get_child_category_products(message: Message, state: FSMContex
         scraper = UzumScraper(category_id=category_id, token=token.token)
         top = await scraper.get_total_leaders(25)
         text = format_total_top(top, category_product)
-        if scraper.has_auth_error or scraper.has_server_error:
+        if scraper.has_auth_error:
+            print()
             await message.answer("Xatolik adminga murojat qiling")
             return
         await message.answer(f"{text}")
