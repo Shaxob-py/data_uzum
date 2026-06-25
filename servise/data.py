@@ -47,8 +47,10 @@ class UzumScraper:
         self.has_server_error = False
 
     def _get_min_feedback(self, total: int) -> int:
+        if total == 50000:
+            return 1200
         if total > 35000:
-            return 770
+            return 800
         if total > 30000:
             return 650
         if total > 20000:
@@ -152,7 +154,7 @@ class UzumScraper:
 
         async with aiohttp.ClientSession(headers=self.headers) as gql_session:
             print("Загрузка страниц категории...")
-            tasks = [self._fetch_page(gql_session, offset) for offset in range(0, 3000, 48)]
+            tasks = [self._fetch_page(gql_session, offset) for offset in range(0, 3800, 48)]
             pages = await asyncio.gather(*tasks)
             all_products = [p for page in pages for p in page]
 
