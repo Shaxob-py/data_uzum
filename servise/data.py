@@ -27,9 +27,10 @@ class UzumScraper:
     GQL_URL = "https://graphql.uzum.uz/"
     PRODUCT_URL = "https://uzum.uz/ru/product/{product_id}"
 
-    def __init__(self, category_id: int, token: str):
+    def __init__(self, category_id: int, token: str, top_by_feedback: int = 100):
         self.category_id = category_id
         self.token = token
+        self.top_by_feedback = top_by_feedback
         self.sem = asyncio.Semaphore(7)
         self.headers = {
             "user-agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36",
@@ -45,21 +46,6 @@ class UzumScraper:
         }
         self.has_auth_error = False
         self.has_server_error = False
-
-    def _get_min_feedback(self, total: int) -> int:
-        if total == 50000:
-            return 1200
-        if total > 35000:
-            return 800
-        if total > 30000:
-            return 650
-        if total > 20000:
-            return 530
-        elif total > 5000:
-            return 185
-        elif total > 1000:
-            return 70
-        return 0
 
     async def _fetch_page(self, session: aiohttp.ClientSession, offset: int) -> list:
         payload = {
@@ -90,11 +76,8 @@ class UzumScraper:
                 if "errors" in data or "data" not in data or not data["data"].get("makeSearch"):
                     return []
 
-                total = data["data"]["makeSearch"]["total"]
                 items = data["data"]["makeSearch"]["items"] or []
-                products = [i["catalogCard"] for i in items if i.get("catalogCard")]
-                min_feedback = self._get_min_feedback(total)
-                return [p for p in products if p.get("feedbackQuantity", 0) >= min_feedback]
+                return [i["catalogCard"] for i in items if i.get("catalogCard")]
         except Exception:
             return []
 
@@ -104,6 +87,7 @@ class UzumScraper:
             "title": product["title"][:50],
             "price": product.get("minSellPrice", 0),
             "rating": product.get("rating", 0),
+            "feedback_quantity": product.get("feedbackQuantity", 0),
             "week": 0,
             "orders_total": 0,
         }
@@ -113,27 +97,23 @@ class UzumScraper:
                 async with session.get(url, timeout=10) as r:
                     if r.status == 401:
                         self.has_auth_error = True
-                        print(r)
-
                         return fallback_data
                     elif r.status >= 500:
-                        print(r)
                         self.has_server_error = True
                         return fallback_data
                     elif r.status != 200:
-                        print(r)
                         return fallback_data
 
                     html = await r.text()
                     week = re.search(r'(\d+) человек купили на этой неделе', html)
                     orders = re.search(r'ordersAmount:(\d+)', html)
 
-
                     return {
                         "product_id": product["productId"],
                         "title": product["title"][:50],
                         "price": product.get("minSellPrice", 0),
                         "rating": product.get("rating", 0),
+                        "feedback_quantity": product.get("feedbackQuantity", 0),
                         "week": int(week.group(1)) if week else 0,
                         "orders_total": int(orders.group(1)) if orders else 0,
                     }
@@ -154,23 +134,34 @@ class UzumScraper:
 
         async with aiohttp.ClientSession(headers=self.headers) as gql_session:
             print("Загрузка страниц категории...")
-            tasks = [self._fetch_page(gql_session, offset) for offset in range(0, 3800, 48)]
+            tasks = [self._fetch_page(gql_session, offset) for offset in range(0, 5100, 48)]
             pages = await asyncio.gather(*tasks)
             all_products = [p for page in pages for p in page]
 
-        print(f"Получено товаров для анализа: {len(all_products)}")
+        print(f"Всего товаров получено: {len(all_products)}")
         if not all_products:
             return []
+
+        deduped = {}
+        for p in all_products:
+            pid = p["productId"]
+            if pid not in deduped or p.get("feedbackQuantity", 0) > deduped[pid].get("feedbackQuantity", 0):
+                deduped[pid] = p
+        all_products = list(deduped.values())
+
+        all_products.sort(key=lambda p: p.get("feedbackQuantity", 0), reverse=True)
+        top_products = all_products[: self.top_by_feedback]
+        print(f"Отобрано топ-{len(top_products)} товаров по feedbackQuantity для проверки продаж...")
 
         print("Сбор статистики продаж по каждому товару...")
         async with aiohttp.ClientSession(headers=page_headers) as page_session:
             all_results = []
-            for i in range(0, len(all_products), 20):
-                batch = all_products[i:i + 20]
+            for i in range(0, len(top_products), 20):
+                batch = top_products[i:i + 20]
                 tasks = [self._fetch_sales(page_session, p) for p in batch]
                 results = await asyncio.gather(*tasks)
                 all_results.extend(results)
-                print(f"  Проверено: {min(i + 20, len(all_products))}/{len(all_products)}")
+                print(f"  Проверено: {min(i + 20, len(top_products))}/{len(top_products)}")
                 await asyncio.sleep(2)
 
         return all_results

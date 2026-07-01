@@ -35,7 +35,7 @@ async def command_get_child_category(message: Message, state: FSMContext):
         return
     await state.update_data(category=message.text)
 
-    await message.answer("Aniqroq bolishi uchun yana tanglang 🎯",
+    await message.answer("Qaysi kategoriya bo‘yicha tahlil qilmoqchisiz? 📊",
                          reply_markup=reply_buttons(data[message.text].keys()))
     await state.set_state(CustomerState.get_child_category)
 
@@ -64,6 +64,7 @@ async def command_get_child_category_products(message: Message, state: FSMContex
     if message.text not in ['Haftalik', 'Umumiy']:
         await message.answer('Togri narsa yuboring!!')
         return
+    buttons = ['Sotuvlarni tahlil qilish 📊', 'Coin sotib olish 🪙', 'Admin bilan boglanish 👮', ]
 
     user = await User.check_coin(message.from_user.id)
     state_date = await state.get_data()
@@ -87,7 +88,9 @@ async def command_get_child_category_products(message: Message, state: FSMContex
 
         scraper = UzumScraper(category_id=category_id, token=token.token)
         if scraper.has_auth_error:
-            await message.answer("Xatolik adminga murojat qiling")
+            await message.answer("Xatolik boldi boshqattan urinib koring", reply_markup=reply_buttons(buttons))
+
+            await state.clear()
             return
         await state.update_data(is_active=True)
         top = await scraper.get_weekly_trends(25)
@@ -95,7 +98,6 @@ async def command_get_child_category_products(message: Message, state: FSMContex
 
         await message.answer(f"{text}")
         await User.update_coin(message.from_user.id, 35)
-        buttons = ['Sotuvlarni tahlil qilish 📊', 'Coin sotib olish 🪙', 'Admin bilan boglanish 👮', ]
 
         await message.answer(f"Sizda {user.coin} coin qoldi", reply_markup=reply_buttons(buttons))
         await state.clear()
@@ -120,13 +122,13 @@ async def command_get_child_category_products(message: Message, state: FSMContex
         top = await scraper.get_total_leaders(25)
         text = format_total_top(top, category_product)
         if scraper.has_auth_error:
-            print()
-            await message.answer("Xatolik adminga murojat qiling")
+            await message.answer("Xatolik boldi boshqattan urinib koring", reply_markup=reply_buttons(buttons))
+
+            await state.clear()
             return
         await message.answer(f"{text}")
 
     await User.update_coin(message.from_user.id, 40)
 
-    buttons = ['Sotuvlarni tahlil qilish 📊', 'Coin sotib olish 🪙', 'Admin bilan boglanish 👮', ]
     await state.clear()
     await message.answer(f"Sizda {user.coin} qoldi", reply_markup=reply_buttons(buttons))

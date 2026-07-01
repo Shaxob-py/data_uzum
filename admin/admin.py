@@ -14,7 +14,7 @@ from utils.keyboard import reply_buttons
 async def admin_command_handler(message: Message, state: FSMContext):
     if message.from_user.id != settings.ADMIN_TELEGRAM_ID:
         return
-    buttons = ['JWT yangilash', 'Userlarni korish', "Coin berish"]
+    buttons = ['JWT yangilash', 'Userlarni korish', "Coin berish" , 'Habar uyborish']
 
     await message.answer('Tanglang aka', reply_markup=reply_buttons(buttons))
     await state.set_state(AdminState.register_admin)
@@ -28,7 +28,8 @@ async def admin_command_handler(message: Message, state: FSMContext):
         all_users += f'Name:  {user.name}   Phone:  {user.phone} Coin:  {user.coin}\n\n'
     await message.answer(f'{all_users}')
 
-    buttons = ['JWT yangilash', 'Userlarni korish', "Coin berish"]
+    buttons = ['JWT yangilash', 'Userlarni korish', "Coin berish", 'Habar uyborish']
+
     await message.answer("Tanglang aka", reply_markup=reply_buttons(buttons))
 
 
@@ -72,7 +73,10 @@ async def admin_command_handler(message: Message, state: FSMContext):
 async def admin_command_handler(message: Message, state: FSMContext):
     await Token.update_token(message.text)
     await message.answer("JWT yangilandi")
-    buttons = ['JWT yangilash', 'Userlarni korish', "Coin berish"]
+    buttons = ['JWT yangilash', 'Userlarni korish', "Coin berish", 'Habar uyborish']
     await state.clear()
 
     await message.answer("Tanglang aka", reply_markup=reply_buttons(buttons))
+
+
+# @dp.message(F.text == "Habar uyborish")
